@@ -411,7 +411,7 @@ cdef class AtomNetwork:
         if isinstance(filename, unicode):
             filename = (<unicode>filename).encode('utf8')
 
-        cdef char* c_rad_file = rad_file
+        cdef char* c_rad_file = NULL
         if rad_flag:
             if not rad_file:
                 pyzeo.extension.zeo_initializeRadTable()
@@ -450,7 +450,7 @@ cdef class AtomNetwork:
             filename = (<unicode>filename).encode('utf8')
 
         #Calls Zeo++ readARCFile function defined in networkio.cc.
-        cdef char* c_rad_file = rad_file
+        cdef char* c_rad_file = NULL
         if rad_flag:
             if not rad_file:
                 pyzeo.extension.zeo_initializeRadTable()
@@ -490,7 +490,7 @@ cdef class AtomNetwork:
 
         #Calls Zeo++ readCSSRFile function defined in networkio.cc.
         cdef char* c_rad_file
-        print(rad_flag, rad_file)
+
         if rad_flag:
             #if not rad_file:
             pyzeo.extension.zeo_initializeRadTable()
@@ -529,11 +529,12 @@ cdef class AtomNetwork:
             filename = (<unicode>filename).encode('utf8')
 
         #Calls Zeo++ readV1File function defined in networkio.cc.
-        cdef char* c_rad_file = rad_file
+        cdef char* c_rad_file = NULL
         if rad_flag:
             if not rad_file:
                 pyzeo.extension.zeo_initializeRadTable()
             else:       # rad_file is defined
+                c_rad_file = rad_file
                 pyzeo.extension.zeo_readRadTable(c_rad_file)
 
         atmnet = AtomNetwork()

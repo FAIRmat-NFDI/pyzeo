@@ -133,3 +133,4 @@ tests/*.xyz
 tests/*.vtk
 tests/*.res
 tests/*.cif
+!tests/EDI.cif
