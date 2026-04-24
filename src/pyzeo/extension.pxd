@@ -200,7 +200,7 @@ cdef extern from "../network.h":
 
     cdef void loadRadii(ATOM_NETWORK*)
 
-    cdef void loadMass(bool, ATOM_NETWORK*)
+    cdef void loadMass(bint, ATOM_NETWORK*)
 
 cdef extern from "../area_and_volume.h":
     cdef void visVoro(char* name, double probeRad, int skel_a, int skel_b, int skel_c,
