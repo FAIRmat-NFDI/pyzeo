@@ -1,6 +1,7 @@
 import pytest
 import re
 import math
+import os
 from pyzeo.netstorage import AtomNetwork
 from pyzeo.area_volume import surface_area
 from pyzeo.high_accuracy import high_accuracy_atomnet
@@ -36,12 +37,19 @@ from pyzeo.high_accuracy import high_accuracy_atomnet
          }
         ), 
 ])
-def test_surface_area_mass(read_kwargs, expected_values):
+def test_surface_area_mass(data_dir, read_kwargs, expected_values):
     """
     Test that the surface_area calculation computes the correct
     mass-related results under different mass initialization conditions.
     """
-    atmnet = AtomNetwork.read_from_CIF("EDI.cif", **read_kwargs)
+
+    structure_path = os.path.join(data_dir, "EDI.cif")
+
+    current_kwargs = read_kwargs.copy()
+    if "mass_file" in current_kwargs:
+        current_kwargs["mass_file"] = os.path.join(data_dir, current_kwargs["mass_file"])
+
+    atmnet = AtomNetwork.read_from_CIF(structure_path, **current_kwargs)
     ha_atmnet = atmnet.copy()
     high_accuracy_atomnet(ha_atmnet, "DEF")
 

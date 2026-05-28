@@ -1,13 +1,16 @@
 import pytest
+import os
 from pyzeo.netstorage import AtomNetwork  
 
-def test_find_bounding_atoms():  
+def test_find_bounding_atoms(data_dir):  
     """  
     Test the channel finding and the identification of atoms that
     bound channels. 
     """  
 
-    atmnet = AtomNetwork.read_from_CSSR("EDI.cssr")
+    data_path = os.path.join(data_dir, "EDI.cssr")
+
+    atmnet = AtomNetwork.read_from_CSSR(data_path)
     probe_radius = 1.5 
 
     vornet, _, _ = atmnet.perform_voronoi_decomposition()
