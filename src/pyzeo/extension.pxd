@@ -12,6 +12,7 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.map cimport map as cmap
 from libcpp.set cimport set as cset
+from libcpp cimport bool as cpp_bool
 
 #=============================================================================
 # geometry
@@ -78,12 +79,14 @@ cdef extern from "../networkinfo.h":
 cdef extern from "../channel.h":
     cdef cppclass CHANNEL:
         CHANNEL() except +
+        cmap[int, int] idMappings
+        void findBoundingAtoms(ATOM_NETWORK*, vector[BASIC_VCELL], vector[int])
 
 cdef extern from "../channel.h" namespace "CHANNEL":
-    cdef c_findChannelsInDijkstraNet "findChannels"(DIJKSTRA_NETWORK*, 
-            vector[bint] *, vector[CHANNEL] *)
-    cdef c_findChannelsInVorNet "findChannels"(VORONOI_NETWORK*, double, 
-            vector[bint] *, vector[CHANNEL] *)
+    cdef void c_findChannelsInDijkstraNet "CHANNEL::findChannels"(DIJKSTRA_NETWORK*, 
+            vector[cpp_bool] *, vector[CHANNEL] *)
+    cdef void c_findChannelsInVorNet "CHANNEL::findChannels"(VORONOI_NETWORK*, double, 
+            vector[cpp_bool] *, vector[CHANNEL] *)
 
 cdef class Channel:
     cdef CHANNEL* thisptr
@@ -141,7 +144,7 @@ cdef extern from "../networkstorage.h":
         ATOM() except +
         double x, y, z
         double radius
-        #string type
+        string type
         #int specialID
         double mass
         double charge 
@@ -200,7 +203,7 @@ cdef extern from "../network.h":
 
     cdef void loadRadii(ATOM_NETWORK*)
 
-    cdef void loadMass(bool, ATOM_NETWORK*)
+    cdef void loadMass(bint, ATOM_NETWORK*)
 
 cdef extern from "../area_and_volume.h":
     cdef void visVoro(char* name, double probeRad, int skel_a, int skel_b, int skel_c,
@@ -230,8 +233,13 @@ cdef class VoronoiNode:
 cdef class VoronoiNetwork:
     """ 
     Cython wrapper class for Zeo++ VORONOI_NETWORK class.
+    Contains a pointer to VORONOI_NETWORK, a vector
+    of BASIC_VCELL objects and a flag denoting whether
+    the BASIC_VCELL vector has already been populated.
     """
     cdef VORONOI_NETWORK* thisptr
+    cdef vector[BASIC_VCELL] bvcells
+    cdef bint has_bvcells
 
 #=============================================================================
 # netstorage

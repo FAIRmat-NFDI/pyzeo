@@ -1,0 +1,45 @@
+data_O10Si5_2026-04-23_12:23:45
+#******************************************
+#
+# CIF file created by Zeo++
+# Zeo++ is an open source package to
+# analyze microporous materials
+#
+#*******************************************
+
+_cell_length_a		6.926   
+_cell_length_b		6.926   
+_cell_length_c		6.41   
+_cell_angle_alpha		90   
+_cell_angle_beta		90   
+_cell_angle_gamma		90   
+
+_symmetry_space_group_name_H-M		'P1'
+_symmetry_Int_Tables_number		1
+_symmetry_cell_setting		Tetragonal
+
+loop_
+_symmetry_equiv_pos_as_xyz
+'+x,+y,+z'
+
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+1	O	0.1898	0	0.355
+2	O	0	0.8102	0.645
+3	O	0	0.1898	0.645
+4	O	0.8102	0	0.355
+5	O	0.1897	0.1897	0
+6	O	0.1897	0.8103	0
+7	O	0.8103	0.1897	0
+8	O	0.8103	0.8103	0
+9	O	0.5	0	0.1183
+10	O	0	0.5	0.8817
+11	Si	0.2679	0	0.1184
+12	Si	0	0.7321	0.8816
+13	Si	0	0.2679	0.8816
+14	Si	0.7321	0	0.1184
+15	Si	0	0	0.5

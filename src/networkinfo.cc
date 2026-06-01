@@ -33,6 +33,7 @@ stripAtomNameInternalFlag = value;
 
 /** Fills the radius table with several default values. */
 void initializeRadTable(){
+radTable.clear();
 //radTable.insert(pair <string,double> ("Symbol",  vdW_Radius));
 radTable.insert(pair <string,double> ("H",  1.09));
 radTable.insert(pair <string,double> ("D",  1.09));
@@ -154,6 +155,7 @@ radTable.insert(pair <string,double> ("Ds",  2));
  * threshold +0.4A
  * */
 void initializeCovRadTable(){
+covRadTable.clear();
 //covRadTable.insert(pair <string,double> ("Symbol",  Covalent_Radius));
 covRadTable.insert(pair <string,double> ("H",  0.23));
 covRadTable.insert(pair <string,double> ("D",  0.23));
@@ -271,6 +273,7 @@ covRadTable.insert(pair <string,double> ("Ds",  1.5));
 /** Fills the mass table with several default values
  ** in units of g/mole. */
 void initializeMassTable(){
+massTable.clear();
 //massTable.insert(pair <string,double> ("Symbol",  Atomic_Weight));
 massTable.insert(pair <string,double> ("H",  1.008));
 massTable.insert(pair <string,double> ("D",  2.0));
@@ -388,6 +391,7 @@ massTable.insert(pair <string,double> ("Ds",  271));
 
 /** Fills atom metal/nonmetal information **/
 void  initializeAtomCharacterTable(){
+ atomicCharacterTable.clear();
   // value set to true if atom is metal
 
 //  atomicCharacterTable.insert(pair <string,bool> ("Symbol",true));
@@ -508,6 +512,7 @@ void  initializeAtomCharacterTable(){
 /** Fills the atomic number table with atomic number of all elements
  ** */
 void initializeAtomicNumberTable(){
+  atomicNumberTable.clear();
   atomicNumberTable.insert(pair <string,int> ("H", 1));
   atomicNumberTable.insert(pair <string,int> ("D", 1));
   atomicNumberTable.insert(pair <string,int> ("He", 2));

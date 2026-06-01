@@ -6,6 +6,7 @@
 import sys
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from libcpp cimport bool as cpp_bool
 from cython.operator cimport dereference as deref, preincrement as inc
 cimport pyzeo.extension
 
@@ -150,12 +151,37 @@ def isMetal(element):
 # channel
 cdef class Channel:
     """
-    Python wrapper to Zeo++ Channel.
+    Python wrapper class to store the Zeo++ Channel objects derived from the Voronoi network.
     """
     def __cinit__(self):
         self.thisptr = new CHANNEL()
     def __dealloc__(self):
         del self.thisptr
+
+    def find_bounding_atoms(self, AtomNetwork atmnet, VoronoiNetwork vornet):
+        """
+        Get the IDs of all atoms that bound this channel.
+        An atom is considered to bound a channel if a Voronoi
+        node of the channel is a member of the atom's Voronoi
+        cell.
+
+        Args:
+        atmnet: AtomNetwork object
+            The atom network structure of the associated channel
+        vornet: VoronoiNetwork object
+            The Voronoi network structure of the associated channel
+
+        Returns:
+            List of indices of the atoms that bound this channel
+        """
+        if not vornet.has_bvcells:
+            raise ValueError("Voronoi cells not found. Run decomposition first.")
+
+        cdef vector[int] atom_ids
+
+        self.thisptr.findBoundingAtoms(atmnet.thisptr, vornet.bvcells, atom_ids)
+
+        return [atom_ids[i] for i in range(atom_ids.size())]
 
 #=============================================================================
 # psd
@@ -329,7 +355,7 @@ cdef class Atom:
 
     property coords:
         def __get__(self):
-            coords = list(self.thisptr.x, self.thisptr.y, self.thisptr.z)
+            coords = [self.thisptr.x, self.thisptr.y, self.thisptr.z]
             return coords
         def __set__(self, coords):      # Don't set this
             """
@@ -345,6 +371,13 @@ cdef class Atom:
         def __set__(self, radius): 
             print("This value is not supposed to be modified")
             self.thisptr.radius = radius
+
+    @property
+    def type(self):
+        """
+        Returns the atom type.
+        """
+        return self.thisptr.type.decode('utf-8')
 
 
 cdef class AtomNetwork:
@@ -372,6 +405,25 @@ cdef class AtomNetwork:
         newatmnet.rad_flag = self.rad_flag
         return newatmnet
 
+    @property  
+    def no_atoms(self):  
+        """
+        Returns the number of atoms in the AtomNetwork.
+        """  
+        return self.thisptr.no_atoms
+
+    @property  
+    def atoms(self):  
+        """
+        Returns the Atom objects in the Atomnetwork.
+        """  
+        atom_list = []  
+        for i in range(self.thisptr.no_atoms):  
+            atom = Atom()  
+            atom.thisptr[0] = self.thisptr.atoms[i]  
+            atom_list.append(atom)  
+        return atom_list
+
     #def relative_to_absolute(self, point):
     #    cdef CPoint* cpoint_ptr = (<Point?>point).thisptr
     #    cdef double x = cpoint_ptr.vals[0]
@@ -388,7 +440,8 @@ cdef class AtomNetwork:
     #            rel_point.vals[2])
 
     @classmethod
-    def read_from_CIF(cls, filename, rad_flag=True, rad_file=None):
+    def read_from_CIF(cls, filename, rad_flag=True, rad_file=None,
+                      mass_flag=True, mass_file=None):
         """
         Static method to create and populate the AtomNetwork with 
         atom data from a CIF file.
@@ -402,32 +455,51 @@ cdef class AtomNetwork:
                 Input file containing atomic radii
                 Works only when rad_flag is True.
                 If rad_file is not specified, Zeo++ default values are used.
+            mass_flag (optional):
+                Flag denoting whether atomic masses are used.
+                Default is True
+            mass_file (optional):
+                Input file containing atomic masses
+                Works only when mass_flag is True.
+                If mass_file is not specified, Zeo++ default values are used.
         Returns:
             Instance of AtomNetwork
         """
         #Calls Zeo++ readCIFFile function defined in networkio.cc.
         if isinstance(rad_file, unicode):
             rad_file = (<unicode>rad_file).encode('utf8')
+        if isinstance(mass_file, unicode):
+            mass_file = (<unicode>mass_file).encode('utf8')
         if isinstance(filename, unicode):
             filename = (<unicode>filename).encode('utf8')
 
-        cdef char* c_rad_file = rad_file
+        cdef char* c_rad_file = NULL
         if rad_flag:
-            if not rad_file:
-                pyzeo.extension.zeo_initializeRadTable()
-            else:       # rad_file is defined
+            pyzeo.extension.zeo_initializeRadTable()
+            if rad_file:       # rad_file is defined
                 c_rad_file = rad_file
                 pyzeo.extension.zeo_readRadTable(c_rad_file)
+
+        cdef char* c_mass_file = NULL
+        if mass_flag:
+            pyzeo.extension.zeo_initializeMassTable()
+            if mass_file:
+                c_mass_file = mass_file
+                pyzeo.extension.zeo_readMassTable(c_mass_file)
 
         atmnet = AtomNetwork()
         cdef char* c_filename = filename
         if not readCIFFile(c_filename, atmnet.thisptr, rad_flag):
             raise IOError
+
+        loadMass(mass_flag, atmnet.thisptr)
+
         atmnet.rad_flag = rad_flag
         return atmnet
 
     @classmethod
-    def read_from_ARC(cls, filename, rad_flag=True, rad_file=None):
+    def read_from_ARC(cls, filename, rad_flag=True, rad_file=None,
+                      mass_flag=True, mass_file=None):
         """
         Static method to create and populate the AtomNetwork with 
         atom data from a ARC file.
@@ -441,32 +513,51 @@ cdef class AtomNetwork:
                 Input file containing atomic radii
                 Works only when rad_flag is True.
                 If rad_file is not specified, default values are used.
+            mass_flag (optional):
+                Flag denoting whether atomic masses are used.
+                Default is True
+            mass_file (optional):
+                Input file containing atomic masses
+                Works only when mass_flag is True.
+                If mass_file is not specified, Zeo++ default values are used.
         Returns:
             Instance of AtomNetwork
         """
         if isinstance(rad_file, unicode):
             rad_file = (<unicode>rad_file).encode('utf8')
+        if isinstance(mass_file, unicode):
+            mass_file = (<unicode>mass_file).encode('utf8')
         if isinstance(filename, unicode):
             filename = (<unicode>filename).encode('utf8')
 
         #Calls Zeo++ readARCFile function defined in networkio.cc.
-        cdef char* c_rad_file = rad_file
+        cdef char* c_rad_file = NULL
         if rad_flag:
-            if not rad_file:
-                pyzeo.extension.zeo_initializeRadTable()
-            else:       # rad_file is defined
+            pyzeo.extension.zeo_initializeRadTable()
+            if rad_file:       # rad_file is defined
                 c_rad_file = rad_file
                 pyzeo.extension.zeo_readRadTable(c_rad_file)
+
+        cdef char* c_mass_file = NULL
+        if mass_flag:
+            pyzeo.extension.zeo_initializeMassTable()
+            if mass_file:
+                c_mass_file = mass_file
+                pyzeo.extension.zeo_readMassTable(c_mass_file)
 
         atmnet = AtomNetwork()
         cdef char* c_filename = filename
         if not readARCFile(c_filename, atmnet.thisptr, rad_flag):
             raise IOError
+
+        loadMass(mass_flag, atmnet.thisptr)
+
         atmnet.rad_flag = rad_flag
         return atmnet
 
     @classmethod
-    def read_from_CSSR(cls, filename, rad_flag=True, rad_file=None):
+    def read_from_CSSR(cls, filename, rad_flag=True, rad_file=None,
+                       mass_flag=True, mass_file=None):
         """
         Static method to create and populate the AtomNetwork with 
         atom data from a CSSR file.
@@ -480,33 +571,52 @@ cdef class AtomNetwork:
                 Input file containing atomic radii
                 Works only when rad_flag is True.
                 If rad_file is not specified, default values are used.
+            mass_flag (optional):
+                Flag denoting whether atomic masses are used.
+                Default is True
+            mass_file (optional):
+                Input file containing atomic masses
+                Works only when mass_flag is True.
+                If mass_file is not specified, Zeo++ default values are used.
         Returns:
             Instance of AtomNetwork
         """
         if isinstance(rad_file, unicode):
             rad_file = (<unicode>rad_file).encode('utf8')
+        if isinstance(mass_file, unicode):
+            mass_file = (<unicode>mass_file).encode('utf8')
         if isinstance(filename, unicode):
             filename = (<unicode>filename).encode('utf8')
 
         #Calls Zeo++ readCSSRFile function defined in networkio.cc.
         cdef char* c_rad_file
-        print(rad_flag, rad_file)
+
         if rad_flag:
-            #if not rad_file:
             pyzeo.extension.zeo_initializeRadTable()
             if rad_file:       # rad_file is defined
                 c_rad_file = rad_file
                 pyzeo.extension.zeo_readRadTable(c_rad_file)
 
+        cdef char* c_mass_file = NULL
+        if mass_flag:
+            pyzeo.extension.zeo_initializeMassTable()
+            if mass_file:
+                c_mass_file = mass_file
+                pyzeo.extension.zeo_readMassTable(c_mass_file)
+
         atmnet = AtomNetwork()
         cdef char* c_filename = filename
         if not readCSSRFile(c_filename, atmnet.thisptr, rad_flag):
             raise IOError
+
+        loadMass(mass_flag, atmnet.thisptr)
+
         atmnet.rad_flag = rad_flag
         return atmnet
 
     @classmethod
-    def read_from_V1(cls, filename, rad_flag=True, rad_file=None):
+    def read_from_V1(cls, filename, rad_flag=True, rad_file=None,
+                     mass_flag=True, mass_file=None):
         """
         Static method to create and populate the AtomNetwork with 
         atom data from a V1 file.
@@ -520,26 +630,45 @@ cdef class AtomNetwork:
                 Input file containing atomic radii
                 Works only when rad_flag is True.
                 If rad_file is not specified, default values are used.
+            mass_flag (optional):
+                Flag denoting whether atomic masses are used.
+                Default is True
+            mass_file (optional):
+                Input file containing atomic masses
+                Works only when mass_flag is True.
+                If mass_file is not specified, Zeo++ default values are used.
         Returns:
             Instance of AtomNetwork
         """
         if isinstance(rad_file, unicode):
             rad_file = (<unicode>rad_file).encode('utf8')
+        if isinstance(mass_file, unicode):
+            mass_file = (<unicode>mass_file).encode('utf8')
         if isinstance(filename, unicode):
             filename = (<unicode>filename).encode('utf8')
 
         #Calls Zeo++ readV1File function defined in networkio.cc.
-        cdef char* c_rad_file = rad_file
+        cdef char* c_rad_file = NULL
         if rad_flag:
-            if not rad_file:
-                pyzeo.extension.zeo_initializeRadTable()
-            else:       # rad_file is defined
+            pyzeo.extension.zeo_initializeRadTable()
+            if rad_file:       # rad_file is defined
+                c_rad_file = rad_file
                 pyzeo.extension.zeo_readRadTable(c_rad_file)
+
+        cdef char* c_mass_file = NULL
+        if mass_flag:
+            pyzeo.extension.zeo_initializeMassTable()
+            if mass_file:
+                c_mass_file = mass_file
+                pyzeo.extension.zeo_readMassTable(c_mass_file)
 
         atmnet = AtomNetwork()
         cdef char* c_filename = filename
         if not readV1File(c_filename, atmnet.thisptr, rad_flag):
             raise IOError
+
+        loadMass(mass_flag, atmnet.thisptr)
+
         atmnet.rad_flag = rad_flag
         return atmnet
 
@@ -668,11 +797,14 @@ cdef class AtomNetwork:
         #Calls Zeo++ performVoronoiDecomp function defined in network.cc.
         vornet = VoronoiNetwork()  
         cdef vector[VOR_CELL] vcells
-        cdef vector[BASIC_VCELL] bvcells
+
         #print self.rad_flag
         if not performVoronoiDecomp(self.rad_flag, self.thisptr, 
-                vornet.thisptr, &vcells, saveVorCells, &bvcells):
+                vornet.thisptr, &vcells, saveVorCells, &vornet.bvcells):
             raise ValueError # Change it to appropriate error
+
+        vornet.has_bvcells = True
+
         cdef int N
 
         # Get the edge centers
@@ -893,6 +1025,37 @@ cdef class VoronoiNetwork:
             #basicvcell.thisptr = &(bvcells[i])
             #bvcelllist.append(bvcells[i])
         return vornet
+
+    def find_channels(self, double channel_radius):
+        """
+        Find channels in a Voronoi network.
+
+        Identifies channels (sets of accessible Voronoi nodes) within the associated
+        Voronoi network for a given probe radius.
+
+        Args:
+            channel_radius : float
+                Radius of probe used to determine the accessibility of void space.
+
+        Returns:
+            1) py_channels: List of Channel objects representing accessible channels
+            2) py_access_info: List of Booleans, where access_info[i] indicates
+               if Voronoi node i is accessible for the probe
+        """
+        cdef vector[cpp_bool] access_info
+        cdef vector[CHANNEL] c_channels
+
+        c_findChannelsInVorNet(self.thisptr, channel_radius, &access_info, &c_channels)
+
+        py_access_info = [access_info[i] for i in range(access_info.size())]
+
+        py_channels = []
+        for i in range(c_channels.size()):
+            channel = Channel()
+            channel.thisptr[0] = c_channels[i]
+            py_channels.append(channel)
+
+        return py_channels, py_access_info
 
 def substitute_atoms(atmnet, substituteSeed, radialFlag):
     """
