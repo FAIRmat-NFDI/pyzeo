@@ -1,9 +1,11 @@
 import sys
 import platform
-from distutils.ccompiler import new_compiler
-from distutils.sysconfig import customize_compiler
+# Import setuptools before distutils so that, on Python 3.12+ where distutils was
+# removed from the standard library, setuptools' vendored distutils shim is used.
 from setuptools import setup
 from setuptools.extension import Extension
+from distutils.ccompiler import new_compiler
+from distutils.sysconfig import customize_compiler
 from subprocess import getoutput
 
 

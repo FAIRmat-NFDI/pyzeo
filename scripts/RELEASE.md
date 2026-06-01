@@ -13,9 +13,20 @@ then upload the sdist + wheels to PyPI.
 ## Prerequisites
 
 ```sh
-pip install build twine cython
+python -m pip install --upgrade pip
+pip install --upgrade setuptools wheel cython build twine
 ```
 
+`setuptools`, `wheel` and `cython` are needed to regenerate the C++ source and
+compile (step 1); `build` and `twine` are used to package and upload (steps 3,
+5). On Python 3.12+ `distutils` was removed from the standard library, so an
+up-to-date `setuptools` (which vendors a `distutils` shim) is required.
+
+- A C++ compiler and the Python development headers (step 1 compiles the
+  extension after regenerating the C++). On Debian/Ubuntu, for the Python
+  version you build with: `sudo apt install pythonX.Y-dev` (e.g.
+  `python3.13-dev`). Without them the build fails with
+  `fatal error: Python.h: No such file or directory`.
 - A PyPI account with upload rights to `pyzeo`, configured via `~/.pypirc` or a
   token passed to `twine`.
 - The [`gh`](https://cli.github.com/) CLI authenticated to this repo (used to
