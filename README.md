@@ -55,6 +55,8 @@ python setup.py build_ext --inplace --force
 
 Remember to disable cython afterwards by setting `USE_CYTHON=False` in setup.py.
 
+> **Maintainers:** see [scripts/RELEASE.md](scripts/RELEASE.md) for the full release process.
+
 ### License
 
 The python wrapper code is licensed under Apache 2.0. [Zeo++

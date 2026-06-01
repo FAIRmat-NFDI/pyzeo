@@ -8,8 +8,8 @@ from subprocess import getoutput
 
 
 # Check python version
-if sys.version_info[:2] < (3, 8):
-    raise RuntimeError("Python version >= 3.8 required.")
+if sys.version_info[:2] < (3, 10):
+    raise RuntimeError("Python version >= 3.10 required.")
 
 # The recommendation
 # (https://cython.readthedocs.io/en/latest/src/userguide/source_files_and_compilation.html#distributing-cython-modules)
